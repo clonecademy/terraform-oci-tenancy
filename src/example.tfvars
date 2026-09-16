@@ -12,3 +12,6 @@ private_key_path = "" # ~/.config/oci/config -> key_file
 
 # Only if the private key is encrypted.
 # private_key_password = ""
+
+# For initial server administration.
+ssh_public_key_path = ""
