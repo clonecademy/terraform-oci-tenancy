@@ -1,5 +1,17 @@
 # PATH: /.gitignore
 
+# Terraform
+
+.terraform/
+*.tfplan
+*.tfstate
+*.tfstate.*
+*.tfvars
+*.tfvars.*
+!example.tfvars
+backend.hcl
+.terraformrc
+
 # Operating System
 
 .DS_Store
