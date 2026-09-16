@@ -33,6 +33,7 @@ jobs:
       TF_VAR_user_ocid: ${{ secrets.OCI_USER_OCID }}
       TF_VAR_fingerprint: ${{ secrets.OCI_FINGERPRINT }}
       TF_VAR_region: ${{ secrets.OCI_REGION }}
+      TF_VAR_mysql_admin_password: ${{ secrets.MYSQL_ADMIN_PASSWORD }}
 
     steps:
       - name: Checkout

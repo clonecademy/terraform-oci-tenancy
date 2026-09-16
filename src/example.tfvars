@@ -15,3 +15,6 @@ private_key_path = "" # ~/.config/oci/config -> key_file
 
 # For initial server administration.
 ssh_public_key_path = ""
+
+# MySQL HeatWave administrator; CI passes TF_VAR_mysql_admin_password instead.
+mysql_admin_password = ""
