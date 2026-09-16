@@ -1,0 +1,111 @@
+name: "Terraform Pipeline"
+
+on:
+  # Run `terraform apply` on push to main.
+  push:
+    branches: [ "main" ]
+  # Run `terraform plan` on pull request to main.
+  pull_request:
+    branches: [ "main" ]
+
+concurrency:
+  group: terraform-oci-tenancy
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  terraform:
+    name: "Terraform Pipeline"
+    # Explicitly pin to latest version for reproducibility.
+    runs-on: ubuntu-26.04
+
+    defaults:
+      run:
+        working-directory: ./src
+
+    env:
+      TF_IN_AUTOMATION: "true"
+      TF_INPUT: "false"
+      TF_VAR_tenancy_ocid: ${{ secrets.OCI_TENANCY_OCID }}
+      TF_VAR_user_ocid: ${{ secrets.OCI_USER_OCID }}
+      TF_VAR_fingerprint: ${{ secrets.OCI_FINGERPRINT }}
+      TF_VAR_region: ${{ secrets.OCI_REGION }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v4
+        with:
+          terraform_version: "~1.16.0"
+          terraform_wrapper: false
+
+      - name: Terraform fmt
+        run: terraform fmt -check -recursive -diff
+
+      - name: Write API signing key
+        run: |
+          umask 077
+          key_path="$RUNNER_TEMP/oci_api_key.pem"
+          printf '%s\n' "$OCI_PRIVATE_KEY" > "$key_path"
+          echo "TF_VAR_private_key_path=$key_path" >> "$GITHUB_ENV"
+        env:
+          OCI_PRIVATE_KEY: ${{ secrets.OCI_PRIVATE_KEY }}
+
+      - name: Terraform init
+        run: |
+          terraform init -input=false -lockfile=readonly \
+            -backend-config="tenancy_ocid=$TF_VAR_tenancy_ocid" \
+            -backend-config="user_ocid=$TF_VAR_user_ocid" \
+            -backend-config="fingerprint=$TF_VAR_fingerprint" \
+            -backend-config="private_key_path=$TF_VAR_private_key_path"
+
+      - name: Terraform validate
+        run: terraform validate -no-color
+
+      - name: Terraform plan
+        run: |
+          terraform plan -input=false -no-color -lock-timeout=5m -out=tfplan
+          terraform show -no-color tfplan > tfplan.txt
+
+      - name: Record plan in job summary
+        run: |
+          {
+            echo "### Terraform Plan"
+            echo '```terraform'
+            cat tfplan.txt
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload plan
+        uses: actions/upload-artifact@v7
+        with:
+          name: tfplan-${{ github.run_id }}-${{ github.run_attempt }}
+          path: src/tfplan.txt
+          retention-days: 30
+
+      - name: Comment plan on pull request
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v9
+        with:
+          script: |
+            const fs = require('fs');
+            const max = 60000;
+            let plan = fs.readFileSync('src/tfplan.txt', 'utf8');
+            if (plan.length > max) {
+              plan = plan.slice(0, max) + '\n...truncated, see the run summary for the full plan.';
+            }
+            await github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: `### Terraform Plan\n\n\`\`\`terraform\n${plan}\n\`\`\``,
+            });
+
+      - name: Terraform apply
+        if: github.event_name == 'push'
+        run: terraform apply -input=false -no-color -lock-timeout=5m tfplan
