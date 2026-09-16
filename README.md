@@ -1,0 +1,1 @@
+# Clonecademy — Oracle Cloud Tenancy
