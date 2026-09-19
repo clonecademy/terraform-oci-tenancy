@@ -6,7 +6,7 @@ variable "ssh_public_key_path" {
 }
 
 module "vps" {
-  source = "github.com/karthikgappiah/terraform-oci-module-vps?ref=v0.0.0"
+  source = "github.com/karthikgappiah/terraform-oci-module-vps?ref=v0.1.0"
 
   compartment_id      = oci_identity_compartment.main.id
   tenancy_ocid        = var.tenancy_ocid
@@ -41,7 +41,7 @@ output "instance_private_ip" {
 }
 
 output "instance_public_ip" {
-  description = "Ephemeral public IP address of the instance"
+  description = "Reserved public IP address of the instance"
   value       = module.vps.instance_public_ip
 }
 
