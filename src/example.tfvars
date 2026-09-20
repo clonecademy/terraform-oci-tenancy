@@ -16,5 +16,10 @@ private_key_path = "" # ~/.config/oci/config -> key_file
 # For initial server administration.
 ssh_public_key_path = ""
 
+# Addresses allowed to reach SSH on the server. ["0.0.0.0/0"] is the whole
+# internet; narrow it to known addresses. CI passes TF_VAR_ssh_ingress_cidrs,
+# which must be JSON because the variable is a list, e.g. '["203.0.113.4/32"]'.
+ssh_ingress_cidrs = ["0.0.0.0/0"]
+
 # MySQL HeatWave administrator; CI passes TF_VAR_mysql_admin_password instead.
 mysql_admin_password = ""
