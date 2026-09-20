@@ -5,14 +5,20 @@ variable "ssh_public_key_path" {
   type        = string
 }
 
+variable "ssh_ingress_cidrs" {
+  description = "CIDR blocks allowed to reach SSH on the server. Narrow this to known addresses, or pass an empty list once the server is reachable over a VPN."
+  type        = list(string)
+}
+
 module "vps" {
-  source = "github.com/clonecademy/terraform-oci-module-vps?ref=v0.1.0"
+  source = "github.com/clonecademy/terraform-oci-module-vps?ref=v0.2.0"
 
   compartment_id      = oci_identity_compartment.main.id
   tenancy_ocid        = var.tenancy_ocid
   region              = var.region
   subnet_id           = module.vcn.public_subnet_id
   ssh_public_key_path = var.ssh_public_key_path
+  ssh_ingress_cidrs   = var.ssh_ingress_cidrs
 }
 
 output "instance_availability_domain" {

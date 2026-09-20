@@ -1,7 +1,7 @@
 # PATH: /src/network.tf
 
 module "vcn" {
-  source = "github.com/clonecademy/terraform-oci-module-vcn?ref=v0.0.0"
+  source = "github.com/clonecademy/terraform-oci-module-vcn?ref=v0.1.0"
 
   compartment_id = oci_identity_compartment.main.id
 }
