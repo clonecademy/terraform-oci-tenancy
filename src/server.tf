@@ -6,7 +6,7 @@ variable "ssh_public_key_path" {
 }
 
 module "vps" {
-  source = "github.com/karthikgappiah/terraform-oci-module-vps?ref=v0.1.0"
+  source = "github.com/clonecademy/terraform-oci-module-vps?ref=v0.1.0"
 
   compartment_id      = oci_identity_compartment.main.id
   tenancy_ocid        = var.tenancy_ocid
