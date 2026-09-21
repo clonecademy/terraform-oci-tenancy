@@ -1,12 +1,19 @@
 name: "Terraform Pipeline"
 
+# Only changes that can affect the plan trigger a run, so documentation-only changes skip planning and the apply approval.
+# example.tfvars is never read by CI.
 on:
   # Run `terraform apply` on push to main, once approved.
   push:
     branches: [ "main" ]
+    paths: &terraform_paths
+      - "src/**"
+      - "!src/example.tfvars"
+      - ".github/workflows/terraform.yml"
   # Run `terraform plan` on pull request to main.
   pull_request:
     branches: [ "main" ]
+    paths: *terraform_paths
 
 concurrency:
   group: terraform-oci-tenancy

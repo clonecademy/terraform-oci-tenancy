@@ -19,6 +19,7 @@ Local runs use `terraform.tfvars` (copied from `example.tfvars`) and `backend.hc
 
 ## CI (`.github/workflows/terraform.yml`)
 
+- The workflow runs only when `src/` (other than `example.tfvars`) or the workflow itself changes; documentation-only changes skip it entirely.
 - Pull requests to `main`: fmt, init, validate, plan; the plan is posted as a PR comment and uploaded as an artifact.
 - Push to `main`: the `apply` job waits for approval on the `production` environment, re-plans, `diff`s the new rendered plan against the reviewed `tfplan.txt`, and only applies if they match.
 - Only the rendered plan text is uploaded, never the binary plan: the repository is public and the binary holds sensitive variable values.
