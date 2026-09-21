@@ -1,7 +1,7 @@
 name: "Terraform Pipeline"
 
 on:
-  # Run `terraform apply` on push to main.
+  # Run `terraform apply` on push to main, once approved.
   push:
     branches: [ "main" ]
   # Run `terraform plan` on pull request to main.
@@ -17,16 +17,19 @@ permissions:
   pull-requests: write
 
 jobs:
-  terraform:
-    name: "Terraform Pipeline"
+  plan:
+    name: "Terraform Plan"
     # Explicitly pin to latest version for reproducibility.
     runs-on: ubuntu-26.04
+
+    outputs:
+      plan_artifact: ${{ steps.plan_artifact.outputs.name }}
 
     defaults:
       run:
         working-directory: ./src
 
-    env:
+    env: &terraform_env
       TF_IN_AUTOMATION: "true"
       TF_INPUT: "false"
       TF_VAR_tenancy_ocid: ${{ secrets.OCI_TENANCY_OCID }}
@@ -34,14 +37,17 @@ jobs:
       TF_VAR_fingerprint: ${{ secrets.OCI_FINGERPRINT }}
       TF_VAR_region: ${{ secrets.OCI_REGION }}
       TF_VAR_mysql_admin_password: ${{ secrets.MYSQL_ADMIN_PASSWORD }}
+      TF_VAR_alarm_email: ${{ secrets.ALARM_EMAIL }}
       # A list variable, so the secret must hold JSON, e.g. ["203.0.113.4/32"].
       TF_VAR_ssh_ingress_cidrs: ${{ secrets.SSH_INGRESS_CIDRS }}
 
     steps:
-      - name: Checkout
+      - &checkout
+        name: Checkout
         uses: actions/checkout@v7
 
-      - name: Setup Terraform
+      - &setup_terraform
+        name: Setup Terraform
         uses: hashicorp/setup-terraform@v4
         with:
           terraform_version: "~1.16.0"
@@ -50,7 +56,8 @@ jobs:
       - name: Terraform fmt
         run: terraform fmt -check -recursive -diff
 
-      - name: Write API signing key
+      - &write_api_signing_key
+        name: Write API signing key
         run: |
           umask 077
           key_path="$RUNNER_TEMP/oci_api_key.pem"
@@ -59,7 +66,8 @@ jobs:
         env:
           OCI_PRIVATE_KEY: ${{ secrets.OCI_PRIVATE_KEY }}
 
-      - name: Write SSH public key
+      - &write_ssh_public_key
+        name: Write SSH public key
         run: |
           key_path="$RUNNER_TEMP/oci_ssh_key.pub"
           printf '%s\n' "$SSH_PUBLIC_KEY" > "$key_path"
@@ -67,7 +75,8 @@ jobs:
         env:
           SSH_PUBLIC_KEY: ${{ secrets.SSH_PUBLIC_KEY }}
 
-      - name: Terraform init
+      - &terraform_init
+        name: Terraform init
         run: |
           terraform init -input=false -lockfile=readonly \
             -backend-config="tenancy_ocid=$TF_VAR_tenancy_ocid" \
@@ -78,7 +87,8 @@ jobs:
       - name: Terraform validate
         run: terraform validate -no-color
 
-      - name: Terraform plan
+      - &terraform_plan
+        name: Terraform plan
         run: |
           terraform plan -input=false -no-color -lock-timeout=5m -out=tfplan
           terraform show -no-color tfplan > tfplan.txt
@@ -92,10 +102,17 @@ jobs:
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
 
+      # Named here and passed to the apply job so that re-running only a failed apply still finds this attempt's plan.
+      - name: Name plan artifact
+        id: plan_artifact
+        run: echo "name=tfplan-${{ github.run_id }}-${{ github.run_attempt }}" >> "$GITHUB_OUTPUT"
+
+      # Only the rendered plan is uploaded: the binary plan file holds variable values, sensitive ones included, and
+      # artifacts on a public repository can be downloaded by anyone.
       - name: Upload plan
         uses: actions/upload-artifact@v7
         with:
-          name: tfplan-${{ github.run_id }}-${{ github.run_attempt }}
+          name: ${{ steps.plan_artifact.outputs.name }}
           path: src/tfplan.txt
           retention-days: 30
 
@@ -117,6 +134,40 @@ jobs:
               body: `### Terraform Plan\n\n\`\`\`terraform\n${plan}\n\`\`\``,
             });
 
+  apply:
+    name: "Terraform Apply"
+    if: github.event_name == 'push'
+    needs: plan
+    runs-on: ubuntu-26.04
+
+    # Waits for a required reviewer to approve the plan in the run summary. A merged change that would destroy the server
+    # or the database stops here rather than applying on its own.
+    environment: production
+
+    defaults:
+      run:
+        working-directory: ./src
+
+    env: *terraform_env
+
+    steps:
+      - *checkout
+      - *setup_terraform
+      - *write_api_signing_key
+      - *write_ssh_public_key
+      - *terraform_init
+      - *terraform_plan
+
+      - name: Download reviewed plan
+        uses: actions/download-artifact@v7
+        with:
+          name: ${{ needs.plan.outputs.plan_artifact }}
+          path: reviewed
+
+      # The binary plan cannot be carried over from the plan job (see Upload plan), so it is made again here. Apply only if
+      # it matches what the reviewer approved; anything that changed in between needs a fresh run and a fresh approval.
+      - name: Compare with reviewed plan
+        run: diff -u ../reviewed/tfplan.txt tfplan.txt
+
       - name: Terraform apply
-        if: github.event_name == 'push'
         run: terraform apply -input=false -no-color -lock-timeout=5m tfplan
