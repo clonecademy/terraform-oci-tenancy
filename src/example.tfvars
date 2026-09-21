@@ -23,3 +23,6 @@ ssh_ingress_cidrs = ["0.0.0.0/0"]
 
 # MySQL HeatWave administrator; CI passes TF_VAR_mysql_admin_password instead.
 mysql_admin_password = ""
+
+# Where alarm notifications are emailed; CI passes TF_VAR_alarm_email instead.
+alarm_email = ""

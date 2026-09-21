@@ -11,7 +11,7 @@ variable "ssh_ingress_cidrs" {
 }
 
 module "vps" {
-  source = "github.com/clonecademy/terraform-oci-module-vps?ref=v0.3.0"
+  source = "github.com/clonecademy/terraform-oci-module-vps?ref=v0.4.0"
 
   compartment_id      = oci_identity_compartment.main.id
   tenancy_ocid        = var.tenancy_ocid
@@ -22,6 +22,8 @@ module "vps" {
 
   tailscale_direct_ingress = true
   web_ingress              = true
+
+  alarm_destinations = [oci_ons_notification_topic.alarms.id]
 }
 
 output "instance_availability_domain" {
