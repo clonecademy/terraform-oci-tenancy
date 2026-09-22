@@ -21,6 +21,13 @@ ssh_public_key_path = ""
 # which must be JSON because the variable is a list, e.g. '["203.0.113.4/32"]'.
 ssh_ingress_cidrs = ["0.0.0.0/0"]
 
+# Addresses allowed to reach the Dokploy dashboard (TCP 3000) on the server.
+# Leave unset ("[]") to reach it only over Tailscale. To expose it publicly
+# too, narrow this to known addresses, same JSON-list caveat as above, and
+# add a matching DOKPLOY_INGRESS_CIDRS secret plus TF_VAR_dokploy_ingress_cidrs
+# entry in the workflow's shared env anchor for CI/apply to pick it up.
+# dokploy_ingress_cidrs = []
+
 # MySQL HeatWave administrator; CI passes TF_VAR_mysql_admin_password instead.
 mysql_admin_password = ""
 

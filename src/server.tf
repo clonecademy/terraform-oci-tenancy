@@ -10,8 +10,17 @@ variable "ssh_ingress_cidrs" {
   type        = list(string)
 }
 
+# Left closed by default: the Dokploy dashboard is reachable over Tailscale without opening anything here. Set this only to
+# expose it publicly too, narrowed to known addresses since the dashboard doubles as an unauthenticated setup screen on
+# first boot.
+variable "dokploy_ingress_cidrs" {
+  description = "CIDR blocks allowed to reach the Dokploy dashboard (TCP 3000) on the server. Leave empty to reach it only over Tailscale."
+  type        = list(string)
+  default     = []
+}
+
 module "vps" {
-  source = "github.com/clonecademy/terraform-oci-module-vps?ref=v0.4.0"
+  source = "github.com/clonecademy/terraform-oci-module-vps?ref=v0.5.0"
 
   compartment_id      = oci_identity_compartment.main.id
   tenancy_ocid        = var.tenancy_ocid
@@ -22,6 +31,7 @@ module "vps" {
 
   tailscale_direct_ingress = true
   web_ingress              = true
+  dokploy_ingress_cidrs    = var.dokploy_ingress_cidrs
 
   alarm_destinations = [oci_ons_notification_topic.alarms.id]
 }

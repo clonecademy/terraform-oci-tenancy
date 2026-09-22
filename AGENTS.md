@@ -29,7 +29,7 @@ Local runs use `terraform.tfvars` (copied from `example.tfvars`) and `backend.hc
 
 - `compartments.tf`: the `main` compartment; everything except the state bucket and IAM policies is created in it.
 - `network.tf`: VCN, gateways, and public/private subnets from the external module `github.com/clonecademy/terraform-oci-module-vcn`.
-- `server.tf`: the Always Free compute instance from `github.com/clonecademy/terraform-oci-module-vps`, placed in the public subnet. SSH ingress is an NSG managed by the module, restricted to `ssh_ingress_cidrs` (deliberately no default). Tailscale is installed by hand, not through cloud-init.
+- `server.tf`: the Always Free compute instance from `github.com/clonecademy/terraform-oci-module-vps`, placed in the public subnet. SSH ingress is an NSG managed by the module, restricted to `ssh_ingress_cidrs` (deliberately no default). Tailscale is installed by hand, not through cloud-init. The Dokploy dashboard (TCP 3000) stays closed unless `dokploy_ingress_cidrs` is set; it's reachable over Tailscale either way.
 - `database.tf`: MySQL HeatWave DB system and HeatWave cluster (Lakehouse) in the private subnet, with an NSG opening the MySQL ports to the VCN CIDRs and the IAM policy the DB system's resource principal needs. A precondition blocks creation outside the tenancy's home region. `ignore_changes = [admin_password, source]` keeps those force-replacing fields from destroying the database.
 - `monitoring.tf`: a single Notifications topic with an email subscription, passed to the VPS module as `alarm_destinations`. Future alarms should reuse this topic.
 
