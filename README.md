@@ -8,7 +8,7 @@ the tenancy costs nothing to run.
 
 | Resource | Details |
 | --- | --- |
-| Server | An Always Free Ubuntu compute instance with a reserved public IP and a 200 GB boot volume. It accepts SSH from allowed addresses only, web traffic on ports 80 and 443, and direct Tailscale connections. |
+| Server | An Always Free Ubuntu compute instance with a reserved public IP and a 200 GB boot volume. It accepts SSH from allowed addresses only, web traffic on ports 80 and 443, and direct Tailscale connections. The Dokploy dashboard (port 3000) is reachable over Tailscale, and publicly too if `dokploy_ingress_cidrs` is set. |
 | Database | A MySQL HeatWave DB system with a HeatWave cluster (Lakehouse enabled), including MySQL Studio and the MySQL REST service. It sits in a private subnet and can be reached only from inside the network, for example from the server. |
 | Network | A virtual cloud network with a public subnet for the server and a private subnet for the database. |
 | Alarms | Email notifications when the server needs attention. |
