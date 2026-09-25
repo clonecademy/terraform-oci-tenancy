@@ -20,7 +20,7 @@ variable "dokploy_ingress_cidrs" {
 }
 
 module "vps" {
-  source = "github.com/clonecademy/terraform-oci-module-vps?ref=v0.5.0"
+  source = "github.com/clonecademy/terraform-oci-module-vps?ref=v0.6.0"
 
   compartment_id      = oci_identity_compartment.main.id
   tenancy_ocid        = var.tenancy_ocid
@@ -32,6 +32,7 @@ module "vps" {
   tailscale_direct_ingress = true
   web_ingress              = true
   dokploy_ingress_cidrs    = var.dokploy_ingress_cidrs
+  minecraft_ingress        = true
 
   alarm_destinations = [oci_ons_notification_topic.alarms.id]
 }
